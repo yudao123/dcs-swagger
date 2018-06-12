@@ -1,0 +1,247 @@
+swagger: '2.0'
+info:
+  description: DCS申请单模块接口文档
+  version: 2.3.0
+  title: DCS Compass API
+  contact:
+    email: yinghua.yu@daocloud.io
+host: 'localhost:9622'
+basePath: /api
+tags:
+  - name: diagram
+    description: 申请单流程API
+  - name: task
+    description: 申请单任务API
+schemes:
+  - http
+paths:
+  /diagram:
+    post:
+      tags:
+        - diagram
+      operationId: createApplyDiagram
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              steps:
+                $ref: '#/definitions/ApplyDiagramSteps'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: object
+            properties:
+              diagram_id:
+                type: string
+                minLength: 32
+    get:
+      tags:
+        - diagram
+      operationId: getApplyDiagram
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                minLength: 32
+              steps:
+                $ref: '#/definitions/ApplyDiagramSteps'
+  '/diagram/{id}':
+    put:
+      deprecated: true
+      tags:
+        - diagram
+      operationId: saveApplyDiagram
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          minLength: 32
+          required: true
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              steps:
+                $ref: '#/definitions/ApplyDiagramSteps'
+      responses:
+        '200':
+          description: successful operation
+  /task:
+    post:
+      tags:
+        - task
+      operationId: createApplyTask
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: diagram_id
+          type: string
+          minLength: 32
+          required: true
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: object
+            properties:
+              task_id:
+                type: string
+                minLength: 32
+    get:
+      tags:
+        - task
+      operationId: listApplyTask
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - id
+                - owner
+                - status
+              properties:
+                id:
+                  type: string
+                  minLength: 32
+                  description: 任务ID
+                owner:
+                  type: boolean
+                  description: 是否为任务发起人
+                time:
+                  type: string
+                  description: 任务发起时间
+                status:
+                  type: string
+                  description: 任务状态
+  '/task/{id}':
+    get:
+      description: 查看任务具体内容和状态
+      tags:
+        - task
+      operationId: viewTaskDetial
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          minLength: 32
+          required: true
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: 任务当前状态
+              create_time:
+                type: string
+                description: 任务创建时间
+              update_time:
+                type: string
+                description: 任务更新时间
+              steps:
+                $ref: '#/definitions/ApplyTaskSteps'
+    delete:
+      description: 删除任务，如果任务已经有人审批，则转为关闭任务
+      tags:
+        - task
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          minLength: 32
+          required: true
+      responses:
+        '200':
+          description: successful operation
+definitions:
+  ApplyDiagramSteps:
+    type: array
+    minLength: 1
+    items:
+      properties:
+        guarder:
+          type: string
+          description: 步骤审批人(user_id)
+          minLength: 32
+          example: 00000000-0000-0000-0000-000000000000
+        guarder_type:
+          type: string
+          description: 步骤审批人类型，user为普通用户，ops为运维组织
+          enum:
+            - user
+            - ops
+  ApplyTaskSteps:
+    type: array
+    minLength: 1
+    items:
+      required:
+        - guarder
+        - status
+      properties:
+        id:
+          type: string
+          description: 步骤ID
+          minLength: 32
+          example: 89c25499-b5f9-45fe-ba35-ab1bb849524e
+        guarder:
+          type: string
+          description: 步骤审批人(guarder_id)
+          minLength: 32
+          example: 89c25499-b5f9-45fe-ba35-ab1bb849524e
+        guarder_type:
+          type: string
+          description: 步骤审批人类型，user表示普通用户，ops表示运维团队
+          enum:
+          - user
+          - ops
+        status:
+          type: string
+          description: >-
+            inactive代表步骤未到达，created代表步骤被创建，allow代表步骤被批准，deny代表步骤被拒绝，closed代表步骤被（管理员）关闭
+          enum:
+            - inactive
+            - created
+            - allow
+            - deny
+            - closed
+        create_time:
+          type: string
+          description: 步骤被创建的时间
+        update_time:
+          type: string
+          description: 步骤被更新的时间
+        comment:
+          type: string
+          description: 备注

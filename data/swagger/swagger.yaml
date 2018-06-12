@@ -1,0 +1,1997 @@
+swagger: '2.0'
+info:
+  version: 3.0.0
+  title: 安全系统接口文档
+  description: >-
+    文档中所提到的session是指以存储cookie（主要为sessionid）为手段，服务端对客户信息进行绑定而形成的对应关系。未登录时session就已经产生，而登录之后这种关系将转化为正式用户，可以做比如修改用户信息、收藏和获取站内消息等动作。
+host: '211.159.148.43:8888'
+tags:
+  - name: article
+    description: 文章系统接口
+  - name: user
+    description: 用户中心接口
+schemes:
+  - http
+paths:
+  /article/hot_news_list:
+    post:
+      tags:
+        - article
+      summary: 获取热门文章列表
+      description: 按照阅读量获取最热的多篇文章的信息
+      operationId: articleHotNewList
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: limit
+          description: 拉取新闻的条数，不得超过10
+          required: false
+          type: integer
+      responses:
+        '200':
+          description: 文章拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - data
+            properties:
+              status:
+                type: integer
+                description: 文章获取状态，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              data:
+                type: array
+                description: 新闻数据
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: 新闻ID
+                    title:
+                      type: string
+                      description: 新闻标题
+                    publish_time:
+                      type: string
+                      description: 新闻发布时间
+                    read_count:
+                      type: integer
+                      description: 阅读数
+  /article/news_list:
+    post:
+      tags:
+        - article
+      summary: 拉取文章列表
+      description: 获取文章列表，包括点赞、评论和阅读数量
+      operationId: articleNewList
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: limit
+          description: 拉取新闻的条数，不得超过10
+          required: false
+          type: integer
+        - in: formData
+          name: notice
+          required: false
+          description: 上次拉取文章返回的prev_notice，首次拉取请留空
+          type: string
+        - in: formData
+          name: keyword
+          required: false
+          description: 关键词信息，非关键词文章列表留空即可
+          type: string
+      responses:
+        '200':
+          description: 文章拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - prev_notice
+              - next_notice
+              - data
+            properties:
+              status:
+                type: integer
+                description: 文章获取状态，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              prev_notice:
+                type: string
+                description: 下一页的新闻拉取所用的notice参数
+                example: ''
+              next_notice:
+                type: string
+                description: 本页新闻拉取所用的notice参数，首次拉取获得的该值也用来检测是否有新的新闻产生
+              data:
+                type: array
+                description: 新闻数据
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: 新闻ID
+                    title:
+                      type: string
+                      description: 新闻标题
+                    publish_time:
+                      type: string
+                      description: 新闻发布时间
+                    thumbnail:
+                      type: string
+                      description: 文章封面
+                    images:
+                      type: array
+                      description: 文章所有封面的数组
+                      items:
+                        type: string
+                        description: 图片的URL
+                    summary:
+                      type: string
+                      description: 文章摘要
+                    like_count:
+                      type: integer
+                      description: 点赞数
+                    read_count:
+                      type: integer
+                      description: 阅读数
+                    comment_count:
+                      type: integer
+                      description: 评论数
+              subscribed:
+                type: integer
+                description: 拉取文章时指定了关键词，该值指明用户是否订阅该关键词，否则该值为0
+                enum:
+                  - 0
+                  - 1
+              total_count:
+                type: integer
+                description: 所有的文章数，若含有关键词，则表示该关键字下所有的文章数
+  /article/news_check_new:
+    post:
+      tags:
+        - article
+      summary: 检测是否有最新文章
+      description: 通过提交最新拉取文章时候的next_notice值，检测是否有新的文章被发布
+      operationId: articleNewsCheckNew
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: notice
+          description: 最新拉取文章时获得的next_notice，该值拉取文章的接口可以获得
+          required: false
+          type: string
+      responses:
+        '200':
+          description: 检测结果返回
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: integer
+                description: 是否有新文章，有为1，没有为0
+                enum:
+                  - 0
+                  - 1
+                example: 0
+  /article/news_content:
+    post:
+      tags:
+        - article
+      summary: 获取文章内容
+      description: 获取文章内容数据，包含原文章列表里面所包含的该新闻数据
+      operationId: articleNewsContent
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: id
+          description: 新闻ID
+          required: false
+          type: integer
+        - in: formData
+          name: with_doc
+          description: 返回文章的内容，不填将不返回文章内容
+          type: integer
+      responses:
+        '200':
+          description: 文章拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: integer
+                description: 文章获取状态，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              doc:
+                type: string
+                description: 文档内容
+                example: ''
+              news_data:
+                type: object
+                description: 新闻数据
+                properties:
+                  id:
+                    type: string
+                    description: 新闻ID
+                  title:
+                    type: string
+                    description: 新闻标题
+                  publish_time:
+                    type: string
+                    description: 新闻发布时间
+                  thumbnail:
+                    type: string
+                    description: 文章封面
+                  images:
+                    type: array
+                    description: 文章所有封面的数组
+                    items:
+                      type: string
+                      description: 图片的URL
+                  summary:
+                    type: string
+                    description: 文章摘要
+                  like_count:
+                    type: integer
+                    description: 点赞数
+                  read_count:
+                    type: integer
+                    description: 阅读数
+                  comment_count:
+                    type: integer
+                    description: 评论数
+              author_data:
+                type: object
+                description: 作者信息
+                properties:
+                  name:
+                    type: string
+                    description: 作者名称
+                  url:
+                    type: string
+                    description: 作者头像url
+                  news_count:
+                    type: integer
+                    description: 作者编写新闻总条数
+              related_data:
+                type: object
+                description: 前后相关文章信息
+                properties:
+                  newer_news:
+                    type: object
+                    description: 前一篇文章信息
+                    properties:
+                      id:
+                        type: integer
+                        description: 文章ID，没有则为0
+                      title:
+                        type: string
+                        description: 文章标题
+                  older_news:
+                    type: object
+                    description: 后一篇文章信息
+                    properties:
+                      id:
+                        type: integer
+                        description: 文章ID，没有则为0
+                      title:
+                        type: string
+                        description: 文章标题
+              extra_data:
+                type: object
+                description: 文章额外的信息
+                properties:
+                  mark_count:
+                    type: integer
+                    description: 文章被收藏数
+                  marked:
+                    type: integer
+                    description: 本人是否收藏该文章，已收藏为1，未收藏为0
+                    enum:
+                      - 1
+                      - 0
+                  liked:
+                    type: integer
+                    description: 本人是否点赞该文章，已点赞为1，未点赞为0
+                    enum:
+                      - 1
+                      - 0
+              keywords:
+                type: array
+                description: 关键词列表
+                items:
+                  type: string
+                  description: 关键词条
+              author:
+                type: string
+                description: 作者名称
+  /article/news_comments:
+    post:
+      tags:
+        - article
+      summary: 获取文章评论内容
+      description: 获取指定新闻ID对应的评论内容
+      operationId: articleNewsComments
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: news_id
+          description: 新闻ID
+          required: false
+          type: integer
+        - in: formData
+          name: offset
+          description: 页码，按需求为从0开始，以10递增
+          required: false
+          type: integer
+        - in: formData
+          name: limit
+          description: 内容条数，按需求指定为10
+          required: false
+          type: integer
+      responses:
+        '200':
+          description: 评论获取结果返回
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: integer
+                description: 评论获取状态，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              data:
+                type: array
+                description: 评论数据
+                items:
+                  type: object
+                  properties:
+                    comment_id:
+                      type: integer
+                      description: 评论ID，用于获取评论的回复
+                    comment_content:
+                      type: string
+                      description: 评论内容
+                    comment_time:
+                      type: string
+                      description: 评论时间
+                    like_count:
+                      type: integer
+                      description: 评论点赞数
+                    user_name:
+                      type: string
+                      description: 评论用户名
+                    user_url:
+                      type: string
+                      description: 用户头像URL
+                    parent_comment_id:
+                      type: integer
+                      description: 回复的评论ID，如果该条评论不是回复评论，此值将为0
+                    parent_user_name:
+                      type: string
+                      description: 回复的评论用户，如果该条评论不是回复评论，此值将为空字符串
+              msg:
+                type: string
+                description: 接口获取失败时会有该字段
+  /article/news_new_comment:
+    post:
+      tags:
+        - article
+      summary: 发布评论
+      description: 根据指定的文章ID，对指定文件发布评论
+      operationId: articleNewsNewComment
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: news_id
+          description: 新闻ID
+          required: true
+          type: integer
+        - in: formData
+          name: content
+          required: true
+          description: 评论内容
+          type: string
+      responses:
+        '200':
+          description: 评论结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: string
+                description: 是否评论成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，评论成功时该内容为空字符串
+                example: ''
+  /article/news_like:
+    post:
+      tags:
+        - article
+      summary: 点赞文章
+      description: 根据指定的文章ID，对文章进行点赞操作
+      operationId: articleNewsLike
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: news_id
+          description: 新闻ID
+          required: true
+          type: integer
+        - in: formData
+          name: do_cancel
+          description: 是否取消点赞，1为是，0为否
+          required: true
+          type: integer
+          enum:
+            - 0
+            - 1
+      responses:
+        '200':
+          description: 点赞结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: string
+                description: 是否点赞成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，点赞成功时该内容为空字符串
+                example: ''
+  /article/comment_like:
+    post:
+      tags:
+        - article
+      summary: 点赞评论
+      description: 根据指定的评论ID，对评论进行点赞操作
+      operationId: articleCommentLike
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: comment_id
+          description: 评论ID
+          required: true
+          type: integer
+      responses:
+        '200':
+          description: 点赞结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: string
+                description: 是否点赞成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，点赞成功时该内容为空字符串
+                example: ''
+  /article/news_mark:
+    post:
+      tags:
+        - article
+      summary: 收藏及取消收藏文章
+      description: 根据指定的文章ID，对文章进行收藏或者取消收藏的操作
+      operationId: articleNewsMark
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: news_id
+          description: 新闻ID
+          required: true
+          type: integer
+        - in: formData
+          name: do_cancel
+          description: 是否取消收藏，1为是，0为否
+          required: true
+          type: integer
+          enum:
+            - 0
+            - 1
+      responses:
+        '200':
+          description: 收藏或取消收藏结果，是否为取消收藏视do_cancel参数而定
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 操作是否成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+  /article/news_subscribe_keyword:
+    post:
+      tags:
+        - article
+      summary: 订阅及取消订阅文章关键词
+      description: 根据关键词，对关键词进行订阅或者取消订阅的操作
+      operationId: articleNewsSubscribeKeyword
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: keyword
+          description: 关键词
+          required: true
+          type: string
+        - in: formData
+          name: do_cancel
+          required: true
+          description: 是否取消订阅关键词，1为是，0为否
+          type: integer
+          enum:
+            - 0
+            - 1
+      responses:
+        '200':
+          description: 订阅或取消订阅结果返回，是否为取消订阅视do_cancel参数而定
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 操作成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+  /article/news_get_keyword_seo_data:
+    post:
+      tags:
+        - article
+      summary: 获取关键词的SEO信息
+      description: 根据关键词获取相关的SEO信息，SEO信息主要用于搜索引擎优化
+      operationId: articleNewsGetKeywordSEOData
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: keyword
+          description: 关键词
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 关键词的SEO信息
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+              - title
+              - keywords
+              - description
+            properties:
+              status:
+                type: integer
+                description: 操作成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+              title:
+                type: string
+                description: SEO标题信息
+              keywords:
+                type: string
+                description: SEO关键词信息
+              description:
+                type: string
+                description: SEO描述信息
+  /article/news_update_keyword_seo_data:
+    post:
+      tags:
+        - article
+      summary: 更新关键词的SEO信息
+      description: 根据关键词更新相关的SEO信息，SEO信息用于搜索引擎优化
+      operationId: articleNewsUpdateKeywordSEOData
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: keyword
+          description: 关键词
+          required: true
+          type: string
+        - in: formData
+          name: title
+          description: SEO标题信息
+          required: true
+          type: string
+        - in: formData
+          name: keywords
+          description: SEO关键词信息，这个是指插入META标签的关键词，非文章的关键词
+          required: true
+          type: string
+        - in: formData
+          name: description
+          description: 关键词
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 更新结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 操作成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+  /article/news_list_my_marked:
+    post:
+      tags:
+        - article
+      summary: 获取用户的收藏记录
+      description: 拉取用户收藏的文章列表，按收藏时间由近极远排列
+      operationId: articleNewsListMyMarked
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: limit
+          description: 单页展示数量，默认为10
+          required: false
+          type: integer
+        - in: formData
+          name: notice
+          description: 页提示码，首次拉取文章时可不填
+          required: false
+          type: string
+      responses:
+        '200':
+          description: 拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 拉取成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+              data:
+                type: array
+                description: 文章列表
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: 新闻ID
+                    title:
+                      type: string
+                      description: 文章标题
+                    thumbnail:
+                      type: string
+                      description: 文章封面
+                    images:
+                      type: array
+                      description: 文章所有封面的数组
+                      items:
+                        type: string
+                        description: 图片的URL
+                    publish_time:
+                      type: string
+                      description: 发布时间
+                    author_name:
+                      type: string
+                      description: 作者名字
+                    keywords:
+                      type: array
+                      description: 关键词列表
+                      items:
+                        type: string
+                        description: 关键词
+                    summary:
+                      type: string
+                      description: 文章摘要
+                    comment_count:
+                      type: integer
+                      description: 评论数
+                    read_count:
+                      type: integer
+                      description: 阅读数
+              prev_notice:
+                type: string
+                description: 前一页的页提示码，当需要加载前一页的内容时，将该值填入本接口的notice参数即可
+  /article/news_list_my_comments:
+    post:
+      tags:
+        - article
+      summary: 获取用户的评论记录
+      description: 拉取用户发表评论的列表，按评论时间由近极远排列
+      operationId: articleNewsListMyComments
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: limit
+          description: 单页展示数量，默认为10
+          required: false
+          type: integer
+        - in: formData
+          name: notice
+          description: 页提示码，首次拉取文章时可不填
+          required: false
+          type: string
+      responses:
+        '200':
+          description: 拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 拉取成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+              data:
+                type: array
+                description: 评论列表
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: 评论ID
+                    time:
+                      type: string
+                      description: 评论发布时间
+                    content:
+                      type: string
+                      description: 评论内容
+                    news_id:
+                      type: integer
+                      description: 评论关联的新闻ID
+                    news_title:
+                      type: string
+                      description: 评论关联的新闻标题
+              prev_notice:
+                type: string
+                description: 前一页的页提示码，当需要加载前一页的内容时，将该值填入本接口的notice参数即可
+  /article/news_list_my_subscription:
+    post:
+      tags:
+        - article
+      summary: 获取用户的订阅文章
+      description: 拉取用户订阅关键词关联的文章列表，按文章发布时间由近极远排列
+      operationId: articleNewsListMySubscription
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: limit
+          description: 单页展示数量，默认为10
+          required: false
+          type: integer
+        - in: formData
+          name: notice
+          description: 页提示码，首次拉取文章时可不填
+          required: false
+          type: string
+      responses:
+        '200':
+          description: 拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 拉取成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 报错消息，操作成功时该内容为空字符串
+                example: ''
+              keywords:
+                type: array
+                description: 登录用户订阅的关键词列表
+                items:
+                  type: string
+                  description: 关键词
+              data:
+                type: array
+                description: 文章列表
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: 新闻ID
+                    title:
+                      type: string
+                      description: 文章标题
+                    thumbnail:
+                      type: string
+                      description: 文章封面
+                    images:
+                      type: array
+                      description: 文章所有封面的数组
+                      items:
+                        type: string
+                        description: 图片的URL
+                    publish_time:
+                      type: string
+                      description: 发布时间
+                    author_name:
+                      type: string
+                      description: 作者名字
+                    keywords:
+                      type: array
+                      description: 关键词列表
+                      items:
+                        type: string
+                        description: 关键词
+                    summary:
+                      type: string
+                      description: 文章摘要
+                    comment_count:
+                      type: integer
+                      description: 评论数
+                    read_count:
+                      type: integer
+                      description: 阅读数
+              prev_notice:
+                type: string
+                description: 前一页的页提示码，当需要加载前一页的内容时，将该值填入本接口的notice参数即可
+  /article/news_topic_list:
+    post:
+      tags:
+        - article
+      summary: 拉取专题列表
+      description: 拉取最新专题信息，每个专题由五篇相同关键词的新闻组成
+      operationId: articleNewsTopicList
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 专题结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: string
+                description: 是否拉取成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 一般是拉取失败的时候需要显示在界面的消息
+                example: ''
+              topic_data:
+                type: array
+                description: 专题信息列表
+                items:
+                  type: object
+                  description: 专题信息
+                  properties:
+                    keyword:
+                      type: string
+                      description: 专题关键词
+                    time:
+                      type: string
+                      description: 专题时间
+                    news_data:
+                      type: array
+                      description: 新闻信息列表
+                      items:
+                        type: object
+                        description: 新闻信息
+                        properties:
+                          id:
+                            type: integer
+                            description: 新闻ID
+                          title:
+                            type: string
+                            description: 新闻标题
+                          thumbnail:
+                            type: string
+                            description: 缩略图
+                          images:
+                            type: array
+                            description: 图片列表
+                            items:
+                              type: string
+                              description: 图片网址
+  /article/full_text_search:
+    post:
+      tags:
+        - article
+      summary: 文章全文搜索
+      description: 根据文章的标题和简述搜索文章
+      operationId: articleFullTextSearch
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: query
+          description: 查询内容
+          required: false
+          type: string
+        - in: formData
+          name: page
+          description: 页号，从1开始，可以不填
+          required: false
+          type: integer
+      responses:
+        '200':
+          description: 搜索结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - data
+            properties:
+              status:
+                type: integer
+                description: 搜索是否有结果，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              data:
+                type: array
+                description: 新闻数据
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: 新闻ID
+                    title:
+                      type: string
+                      description: 新闻标题
+                    thumbnail:
+                      type: string
+                      description: 缩略图
+                    images:
+                      type: array
+                      description: 图片列表
+                      items:
+                        type: string
+                        description: 图片网址
+                    publish_time:
+                      type: string
+                      description: 新闻发布时间
+                    read_count:
+                      type: integer
+                      description: 阅读数
+                    summary:
+                      type: integer
+                      description: 新闻简述
+              page:
+                type: integer
+                description: 当前页号
+              count:
+                type: integer
+                description: 搜索总条目数
+  /article/list_autocomplete:
+    post:
+      tags:
+        - article
+      summary: 搜索词推荐
+      description: 列举用户接下来可能需要的搜索词
+      operationId: articleListAutocomplete
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: query
+          description: 查询内容
+          required: false
+          type: string
+      responses:
+        '200':
+          description: 搜索结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - suggestions
+            properties:
+              status:
+                type: integer
+                description: 搜索是否有结果，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              suggestions:
+                type: array
+                description: 推荐关键词列表
+                items:
+                  type: string
+                  description: 推荐关键词
+  /article/page:
+    get:
+      tags:
+        - article
+      summary: 文章详情页面
+      description: 根据文章ID获取文章的详情内容，该接口返回HTML页面
+      operationId: articlePage
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - text/html
+      parameters:
+        - in: query
+          name: topid
+          description: 文章ID
+          required: true
+          type: integer
+      responses:
+        '200':
+          description: 文章内容
+  /article/keyword:
+    get:
+      tags:
+        - article
+      summary: 关键词搜索页面
+      description: 根据关键词名称获取关键词相关的文章条目，该接口返回HTML页面
+      operationId: articleKeyword
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - text/html
+      parameters:
+        - in: query
+          name: kw
+          description: 关键词名称
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 文章内容
+  /user/login:
+    post:
+      tags:
+        - user
+      summary: 用户登录
+      description: 检查用户名和密码的正确性，并对验证通过的请求发放令牌
+      operationId: userLogin
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: username
+          description: 用户名
+          required: true
+          type: string
+        - in: formData
+          name: password
+          required: true
+          description: 密码
+          type: string
+      responses:
+        '200':
+          description: 登录结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+              - avatar
+              - nickname
+              - verified
+            properties:
+              status:
+                type: string
+                description: 是否登录成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 登录提示，一般是登录失败的时候需要显示在界面的消息
+                example: ''
+              avatar:
+                type: string
+                description: 头像图片的URL
+                example: /static/avatar/1/1_20171210.jpg
+              nickname:
+                type: string
+                description: 用户昵称
+                example: toosimple
+              verified:
+                type: integer
+                description: 用户认证状态，1为未认证，2为认证待确认，3为已认证
+                enum:
+                  - 1
+                  - 2
+                  - 3
+                example: 1
+              is_admin:
+                type: integer
+                description: 当前用户是否为管理员，1为管理员，0为普通用户
+                enum:
+                  - 0
+                  - 1
+  /user/login_callback:
+    get:
+      tags:
+        - user
+      summary: 第三方登录回调（由第三方调用）
+      description: 检查用户名和密码的正确性，并对验证通过的请求发放令牌
+      operationId: userLoginCallback
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - in: query
+          name: type
+          description: 第三方登录类型，qq为QQ登录，wb为微博登录，wx为微信登录
+          required: true
+          type: string
+          enum:
+            - qq
+            - wb
+            - wx
+      responses:
+        '301':
+          description: 登录成功后跳转到主页，失败后跳转到登录页面
+  /user/logout:
+    post:
+      tags:
+        - user
+      summary: 用户退出登录
+      description: 用户退出登录，清除session绑定的登录信息
+      operationId: userLogout
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 注销登录返回信息，成功退出为1，失败为0
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+                description: 是否登录成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+  /user/register:
+    post:
+      tags:
+        - user
+      summary: 用户注册
+      description: 注册新用户
+      operationId: userRegister
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: verification_code
+          description: 验证码
+          required: true
+          type: string
+        - in: formData
+          name: username
+          required: true
+          description: 用户名，请使用邮箱格式
+          type: string
+        - in: formData
+          name: nickname
+          description: 昵称
+          required: true
+          type: string
+        - in: formData
+          name: password
+          description: 密码
+          required: true
+          type: string
+        - in: formData
+          name: password1
+          description: 验证密码，请保持与password表单值相同
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 注册结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: string
+                description: 是否登录成功，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 登录提示，一般是登录失败的时候需要显示在界面的消息
+                example: ''
+  /user/reset_password_callback:
+    get:
+      tags:
+        - user
+      summary: 重置密码回调（由邮箱链接调用）
+      description: 检查邮箱链接里的信息，决定是否继续重置密码的操作
+      operationId: userResetPasswordCallback
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - in: query
+          name: email
+          description: 账户邮箱名
+          required: true
+          type: string
+        - in: query
+          name: code
+          description: 重置密码的校验码
+          required: true
+          type: string
+      responses:
+        '301':
+          description: 若重置链接有效，将跳转到前端的重置密码操作页面。失败的话，将跳转到报错页面。
+  /user/reset_password:
+    post:
+      tags:
+        - user
+      summary: 重置用户密码
+      description: 重置用户账户对应的密码（需要在重置密码回调确认后才能调用）
+      operationId: userResetPassword
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: new_password
+          description: 新密码
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 重置密码结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 重置密码成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/verify_email:
+    post:
+      tags:
+        - user
+      summary: 校验邮箱
+      description: 校验邮箱的有效性，用于注册、找回密码和单纯的查询邮箱是否注册过
+      operationId: userVerifyEmail
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: email
+          description: 邮箱名
+          required: true
+          type: string
+        - in: formData
+          name: for
+          required: true
+          description: 校验目的，register代表注册，reset_password代表重置密码，query代表查询邮箱是否存在
+          type: string
+          enum:
+            - register
+            - reset_password
+            - query
+      responses:
+        '200':
+          description: 邮箱验证结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: >-
+                  若校验目的为注册或重置密码，则值代表邮件发送正确与否，成功为1，失败为0；若校验目的为查询邮箱是否存在，则值代表邮箱是否存在，存在为1，不存在为0。
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/verify_phone:
+    post:
+      tags:
+        - user
+      summary: 校验手机号
+      description: 校验手机号的有效性，并发送验证码到手机以继续实名认证
+      operationId: userVerifyPhone
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: phone_number
+          description: 手机号
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 短信验证结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 短信发送成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/qqlog:
+    get:
+      tags:
+        - user
+      summary: 跳转QQ登录
+      description: 跳转到QQ登录的网址。页面需要跳转，请在空白页面调用
+      operationId: userLoginWithQQ
+      responses:
+        '301':
+          description: 跳转到QQ登录的网址
+  /user/wblog:
+    get:
+      tags:
+        - user
+      summary: 跳转微博登录
+      description: 跳转到微博登录的网址。页面需要跳转，请在空白页面调用
+      operationId: userLoginWithWeibo
+      responses:
+        '301':
+          description: 跳转到微博登录的网址
+  /user/wxlog:
+    get:
+      tags:
+        - user
+      summary: 跳转微信登录
+      description: 跳转到微信登录的网址。页面需要跳转，请在空白页面调用
+      operationId: userLoginWithWeixin
+      responses:
+        '301':
+          description: 跳转到微信登录的网址
+  /user/ping:
+    post:
+      tags:
+        - user
+      summary: 获取用户登录状态
+      description: 获取用户当前是否登录，用户的头像、昵称和是否认证过
+      operationId: userPing
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 登录状态信息
+          schema:
+            type: object
+            required:
+              - status
+              - avatar
+              - nickname
+              - verified
+            properties:
+              status:
+                type: integer
+                description: 是否已经登录，是为1，否为0
+                enum:
+                  - 0
+                  - 1
+                example: 0
+              avatar:
+                type: string
+                description: 头像图片的URL
+                example: /static/avatar/1/1_20171210.jpg
+              nickname:
+                type: string
+                description: 用户昵称
+                example: toosimple
+              verified:
+                type: integer
+                description: 用户认证状态，1为未认证，2为认证待确认，3为已认证
+                enum:
+                  - 1
+                  - 2
+                  - 3
+                example: 1
+              is_admin:
+                type: integer
+                description: 当前用户是否为管理员，1为管理员，0为普通用户
+                enum:
+                  - 0
+                  - 1
+  /user/upload_avatar:
+    post:
+      tags:
+        - user
+      summary: 上传用户头像
+      description: 将用户头像上传到后端储存
+      operationId: userUploadAvatar
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: imagefile
+          description: 图片文件
+          required: true
+          type: file
+      responses:
+        '200':
+          description: 上传头像返回结果
+          schema:
+            type: object
+            required:
+              - status
+              - filename
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 上传成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              filename:
+                type: string
+                description: 上传后的头像路径
+                example: avatar/1.png
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/modify_password:
+    post:
+      tags:
+        - user
+      summary: 修改用户密码
+      description: 通过验证用户原先的密码，将密码修改为预先提供给你的新密码
+      operationId: userModifyPassword
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: old_password
+          description: 原密码
+          required: true
+          type: string
+        - in: formData
+          name: new_password
+          description: 新密码
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 密码修改结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 修改成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/update_verification_info:
+    post:
+      tags:
+        - user
+      summary: 更新用户认证信息
+      description: 提交用户的公司、部门、真实姓名和手机号等信息，等待后来审核人员认证。该接口仅提交资料，并不立即审核
+      operationId: userUpdateVerificationInfo
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: real_name
+          description: 真实姓名
+          required: true
+          type: string
+        - in: formData
+          name: company
+          description: 公司
+          required: true
+          type: string
+        - in: formData
+          name: department
+          description: 部门
+          required: true
+          type: string
+        - in: formData
+          name: phone_number
+          description: 电话号码
+          required: true
+          type: string
+        - in: formData
+          name: code
+          description: 手机校验码
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 资料更新结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 资料更新成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/pull_user_info:
+    post:
+      tags:
+        - user
+      summary: 获取用户详细信息
+      description: 获取用户详细信息，比如昵称、性别、社交账号、行业和职位
+      operationId: userPullUserInfo
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 资料获取结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 资料获取成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              data:
+                type: object
+                description: 用户资料数据，仅资料获取成功时有该项目
+                properties:
+                  nickname:
+                    type: string
+                    description: 昵称
+                    example: toosimple
+                  sex:
+                    type: string
+                    description: 性别
+                    example: 男
+                  qq:
+                    type: string
+                    description: QQ
+                    example: ''
+                  weixin:
+                    type: string
+                    description: 微信
+                    example: ''
+                  weibo:
+                    type: string
+                    description: 微博
+                    example: ''
+                  email:
+                    type: string
+                    description: 邮箱账号
+                    example: gouli@test.com
+                  industry:
+                    type: string
+                    description: 行业信息
+                    example: ''
+                  position:
+                    type: string
+                    description: 职位
+                    example: 设计师
+                  department:
+                    type: string
+                    description: 部门
+                  company:
+                    type: string
+                    description: 公司
+                  special_skills:
+                    type: string
+                    description: 特殊技能
+                  address:
+                    type: string
+                    description: 地址
+                  phone_number:
+                    type: string
+                    description: 电话号码
+                  real_name:
+                    type: string
+                    description: 真实姓名
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/push_user_info:
+    post:
+      tags:
+        - user
+      summary: 更新用户详细信息
+      description: 更新用户详细信息，比如昵称、性别、社交账号、行业和职位
+      operationId: userPushUserInfo
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: nickname
+          description: 昵称，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: sex
+          description: 性别，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: qq
+          description: QQ，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: weixin
+          description: 微信，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: weibo
+          description: 微博，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: email
+          description: 邮箱，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: industry
+          description: 行业，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: position
+          description: 职位，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: department
+          description: 部门，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: company
+          description: 公司，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: special_skills
+          description: 特殊技能，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: address
+          description: 地址，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: phone_number
+          description: 电话号码，留空则不更改
+          required: false
+          type: string
+        - in: formData
+          name: real_name
+          description: 真实姓名，留空则不更改
+          required: false
+          type: string
+      responses:
+        '200':
+          description: 资料获取结果
+          schema:
+            type: object
+            required:
+              - status
+              - msg
+            properties:
+              status:
+                type: integer
+                description: 资料获取成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              msg:
+                type: string
+                description: 当操作失败时的报错信息，成功时该值为空
+                example: ''
+  /user/message_list:
+    post:
+      tags:
+        - user
+      summary: 拉取消息列表
+      description: 获取用户的消息列表，包括消息时间和内容
+      operationId: userMessageList
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: limit
+          description: 拉取新闻的条数，不得超过10
+          required: false
+          type: integer
+        - in: formData
+          name: notice
+          required: false
+          description: 上次拉取消息时返回的prev_notice，首次拉取请留空
+          type: string
+      responses:
+        '200':
+          description: 消息拉取结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - prev_notice
+              - next_notice
+              - data
+            properties:
+              status:
+                type: integer
+                description: 文章获取状态，成功为1，失败为0
+                enum:
+                  - 0
+                  - 1
+                example: 1
+              prev_notice:
+                type: string
+                description: 下一页的消息拉取所用的notice参数
+                example: ''
+              next_notice:
+                type: string
+                description: 本页消息拉取所用的notice参数
+              data:
+                type: array
+                description: 消息数据
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                      description: 消息标题
+                    time:
+                      type: string
+                      description: 消息时间
+                    text:
+                      type: string
+                      description: 消息内容
+  /user/message_check_new:
+    post:
+      tags:
+        - user
+      summary: 检测是否有最新信息
+      description: 通过检查用户是否查看过我的信息来判断用户是否有最新信息
+      operationId: userMessageCheckNew
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 检测结果返回
+          schema:
+            type: object
+            required:
+              - status
+              - count
+            properties:
+              status:
+                type: integer
+                description: 接口请求是否成功
+                enum:
+                  - 0
+                  - 1
+                example: 0
+              count:
+                type: integer
+                description: 未读的消息数目
+                example: 10
